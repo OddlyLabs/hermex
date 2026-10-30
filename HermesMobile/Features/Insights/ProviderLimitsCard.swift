@@ -10,6 +10,9 @@ struct ProviderLimitsSection: View {
     /// Drives the placeholder, and only while `cards` is empty: a refresh with
     /// cards already on screen keeps them rather than blanking the group.
     let isLoading: Bool
+    /// Providers whose refresh failed while their last-known card is shown
+    /// (#1408). Non-empty puts one inline notice at the top of the group.
+    var staleLimitIDs: Set<String> = []
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
@@ -21,6 +24,10 @@ struct ProviderLimitsSection: View {
                 .foregroundStyle(.secondary)
                 .padding(.horizontal, 4)
 
+            if !staleLimitIDs.isEmpty {
+                ProviderLimitsStaleNotice()
+            }
+
             if !cards.isEmpty {
                 ForEach(cards) { card in
                     ProviderLimitsCard(card: card)
@@ -30,6 +37,33 @@ struct ProviderLimitsSection: View {
             }
         }
         .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: cards)
+        .animation(reduceMotion ? nil : .easeOut(duration: 0.2), value: staleLimitIDs)
+    }
+}
+
+/// The refresh-failure notice inside the Limits group (#1408), in the same
+/// style as `ProvidersView`'s banner but without a detail line: the group's
+/// errors are deliberately silent, so the notice only says the values are old.
+private struct ProviderLimitsStaleNotice: View {
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
+            Image(systemName: "exclamationmark.triangle.fill")
+                .font(.caption)
+                .foregroundStyle(.orange)
+                .accessibilityHidden(true)
+
+            Text("Couldn't refresh limits. Showing the last values loaded.")
+                .font(.footnote.weight(.medium))
+                .foregroundStyle(.primary)
+                .multilineTextAlignment(.leading)
+        }
+        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(Color.orange.opacity(0.14))
+        )
+        .accessibilityElement(children: .combine)
     }
 }
 
